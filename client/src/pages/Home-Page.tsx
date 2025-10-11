@@ -29,7 +29,7 @@ const AadhaarOCRUploader: React.FC = () => {
   const frontInputRef = useRef<HTMLInputElement>(null);
   const backInputRef = useRef<HTMLInputElement>(null);
 
-  const {error} = useToast()
+  const {error,success} = useToast()
 
   const handleImageUpload = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -52,6 +52,15 @@ const AadhaarOCRUploader: React.FC = () => {
        event.target.value = '';
     }
   };
+
+  const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    success("Copied to clipboard ✅");
+  } catch {
+    error("Failed to copy text");
+  }
+};
 
   const removeImage = (side: 'front' | 'back') => {
     if (side === 'front') {
@@ -263,11 +272,28 @@ const AadhaarOCRUploader: React.FC = () => {
           <div className="lg:col-span-2">
             {extractedData ? (
               <Card className="h-full">
-                <CardHeader className="pb-4">
+                <CardHeader className="flex flex-row items-center justify-between pb-4">
                   <CardTitle className="text-lg text-gray-800 flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-500" />
                     Extracted Information
                   </CardTitle>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const text = `
+                Name: ${extractedData?.name || 'Not found'}
+                Aadhaar Number: ${extractedData?.aadhaarNumber || 'Not found'}
+                DOB: ${extractedData?.dateOfBirth || 'Not found'}
+                Gender: ${extractedData?.gender || 'Not found'}
+                Address: ${extractedData?.address || 'Not found'}
+                      `.trim();
+                      copyToClipboard(text);
+                    }}
+                  >
+                    Copy All
+                  </Button>
                 </CardHeader>
                 <CardContent className="flex items-center justify-center h-full">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
