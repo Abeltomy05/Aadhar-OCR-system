@@ -1,9 +1,12 @@
 import { visionClient } from "../external/googleVision";
+import fs from "fs";
 import { IUserService } from "../interface/serviceInterfaces/authService.interface";
-import { injectable } from "tsyringe";
+import { inject, injectable } from "tsyringe";
 import { CustomError } from "../utils/customError";
 import { ERROR_MESSAGES } from "../utils/constants/message";
 import { StatusCodes } from "http-status-codes";
+import { IAadhaarValidationService } from "../interface/serviceInterfaces/aadharValidationService.interface";
+import { enhanceImage } from "../utils/helper/sharp.helper";
 
 export interface AadhaarData {
     name?: string;
@@ -16,17 +19,47 @@ export interface AadhaarData {
 @injectable()
 export class UserService implements IUserService{
     constructor(
+      @inject("IAadhaarValidationService")
+      private _aadharService: IAadhaarValidationService
     ){}
 
     async processAadhaarImages(frontImage: Express.Multer.File, backImage: Express.Multer.File): Promise<AadhaarData>{
-      const [frontResult] = await visionClient.textDetection(frontImage.path);
-      const [backResult] = await visionClient.textDetection(backImage.path);
+      const enhancedFrontPath = await enhanceImage(frontImage.path);
+      const enhancedBackPath = await enhanceImage(backImage.path);
 
-      const frontText = frontResult.fullTextAnnotation?.text || '';
-      const backText = backResult.fullTextAnnotation?.text || '';
+      const [frontResult] = await visionClient.textDetection(enhancedFrontPath);
+      const [backResult] = await visionClient.textDetection(enhancedBackPath);
 
-      console.log('Front Aadhaar OCR:', frontText);
-      console.log('Back Aadhaar OCR:', backText);
+      let frontText = 
+        frontResult.fullTextAnnotation?.text || 
+        frontResult.textAnnotations?.[0]?.description ||
+        '';
+      let backText = 
+        backResult.fullTextAnnotation?.text || 
+        backResult.textAnnotations?.[0]?.description ||
+        '';
+
+       // Retry OCR once if text is suspiciously short (Google Vision quirk)
+      if (frontText.length < 50) {
+        const [retryFront] = await visionClient.textDetection(enhancedFrontPath);
+        frontText =
+          retryFront.fullTextAnnotation?.text ||
+          retryFront.textAnnotations?.[0]?.description ||
+          frontText;
+      }
+
+      if (backText.length < 50) {
+        const [retryBack] = await visionClient.textDetection(enhancedBackPath);
+        backText =
+          retryBack.fullTextAnnotation?.text ||
+          retryBack.textAnnotations?.[0]?.description ||
+          backText;
+      }
+  
+      fs.unlinkSync(enhancedFrontPath); // Deleting temporary enhanced images
+      fs.unlinkSync(enhancedBackPath);
+
+      this._aadharService.validateAadhaarText(frontText,backText);
 
       const aadhaarRegex = /\d{4}\s?\d{4}\s?\d{4}/;
 
@@ -72,7 +105,7 @@ export class UserService implements IUserService{
           }
         }
 
-       console.log("Name:",name,"aadhaarNumber:",aadhaarNumber,"dateOfBirth:",dateOfBirth,"gender:",gender,"Address",address)
+        console.log("✅ Aadhaar Extracted:", { name, aadhaarNumber, dateOfBirth, gender, address });
 
        return {
           name,

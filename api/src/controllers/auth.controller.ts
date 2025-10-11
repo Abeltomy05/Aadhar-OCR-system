@@ -2,6 +2,7 @@ import { IUserController } from "../interface/controllerInterfaces/authcontrolle
 import { inject, injectable } from "tsyringe";
 import { IUserService } from "../interface/serviceInterfaces/authService.interface";
 import { Request,Response } from "express";
+import { CustomError } from "../utils/customError";
 
 @injectable()
 export class UserController implements IUserController{
@@ -38,6 +39,15 @@ export class UserController implements IUserController{
              });
         } catch (error) {
             console.error('Upload Aadhaar error:', error);
+
+            if (error instanceof CustomError) {
+                res.status(error.statusCode).json({
+                success: false,
+                message: error.message,
+                });
+                return;
+            }
+
             res.status(500).json({
                 success: false,
                 message: 'Internal server error during Aadhaar processing'

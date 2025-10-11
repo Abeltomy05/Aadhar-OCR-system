@@ -24,6 +24,7 @@
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "reflect-metadata": "^0.2.2",
+    "sharp": "^0.34.4",
     "tsyringe": "^4.10.0"
   },
   "devDependencies": {
@@ -35,6 +36,7 @@
     "@types/morgan": "^1.9.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.5.2",
+    "@types/sharp": "^0.31.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.2"
   }
