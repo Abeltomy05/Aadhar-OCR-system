@@ -36,7 +36,9 @@ const AadhaarOCRUploader: React.FC = () => {
     side: 'front' | 'back'
   ) => {
     const file = event.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+    if (!file) return;
+
+    if (file.type.startsWith('image/')) {
       const preview = URL.createObjectURL(file);
       const uploadedImage = { file, preview };
       
@@ -45,6 +47,9 @@ const AadhaarOCRUploader: React.FC = () => {
       } else {
         setBackImage(uploadedImage);
       }
+    }else{
+       error('Only image files (JPG, PNG, etc.) are allowed.');
+       event.target.value = '';
     }
   };
 
