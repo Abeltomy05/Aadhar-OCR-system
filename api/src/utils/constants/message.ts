@@ -16,6 +16,7 @@ export const SUCCESS_MESSAGES = {
 export const ERROR_MESSAGES = {
     AADHAR_NO_MISMATCH: "Please upload front and back of same aadhar.",
 	AADHAR_NO_NOT_FOUND: "Aadhaar number not found in the uploaded image.",
+	UPLOAD_SAME_AADAHR: "Upload front and back images of same aadhar.",
 	FORBIDDEN: "You do not have permission",
 	SERVER_ERROR: "Something went wrong. Please try again later",
 	NOT_AADHAAR_CARD: "Not a valid Aadhaar card. Please upload a genuine Aadhaar image.",

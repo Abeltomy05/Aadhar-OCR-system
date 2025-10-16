@@ -61,16 +61,63 @@ export class UserService implements IUserService{
 
       this._aadharService.validateAadhaarText(frontText,backText);
 
-      const aadhaarRegex = /\d{4}\s?\d{4}\s?\d{4}/;
+      frontText = frontText.replace(/\r/g, ' ');
+      backText = backText.replace(/\r/g, ' ');
 
-      const aadhaarFrontMatch = frontText.match(aadhaarRegex);
-      const aadhaarBackMatch = backText.match(aadhaarRegex);
+      const patterns = [
+        /\b\d{4}[\s\u00A0\u200B]\d{4}[\s\u00A0\u200B]\d{4}\b/g,  
+        /\d{4}\s+\d{4}\s+\d{4}/g,  
+        /\b\d{12}\b/g,  
+      ];
 
-       if (!aadhaarFrontMatch || !aadhaarBackMatch) {
-          throw new CustomError(ERROR_MESSAGES.AADHAR_NO_NOT_FOUND,StatusCodes.BAD_REQUEST);
+      const getAllMatches = (text: string) => {
+        const allMatches = [];
+        for (const pattern of patterns) {
+          const matches = [...text.matchAll(pattern)];
+          allMatches.push(...matches);
         }
+        return allMatches;
+      };
 
-       const aadhaarNumber = aadhaarFrontMatch?.[0] || aadhaarBackMatch?.[0];
+      let frontMatches = getAllMatches(frontText);
+      let backMatches = getAllMatches(backText);
+
+      const backTextWithSpaces = backText.replace(/\n/g, ' ');
+      const additionalBackMatches = getAllMatches(backTextWithSpaces);
+      backMatches.push(...additionalBackMatches);
+
+      // console.log("All Matches: ", frontMatches, '  ', backMatches);
+
+      if (!frontMatches.length || !backMatches.length) {
+        throw new CustomError(ERROR_MESSAGES.AADHAR_NO_NOT_FOUND, StatusCodes.BAD_REQUEST);
+      }
+
+      const normalize = (str: string) => str.replace(/[\s\r\n\u00A0\u200B]/g, '');
+
+      const frontNumbers = frontMatches.map(m => normalize(m[0]));
+      const backNumbers = backMatches.map(m => normalize(m[0]));
+
+      const validFrontNumbers = frontNumbers.filter(num => num.length === 12);
+      const validBackNumbers = backNumbers.filter(num => num.length === 12);
+
+      const uniqueFrontNumbers = [...new Set(validFrontNumbers)];
+      const uniqueBackNumbers = [...new Set(validBackNumbers)];
+
+      // console.log("Valid Aadhaar numbers - front:", uniqueFrontNumbers, " | back:", uniqueBackNumbers);
+
+      // Find the matching Aadhaar number
+      const aadhaarNumber = uniqueFrontNumbers.find(frontNum => 
+        uniqueBackNumbers.includes(frontNum)
+      );
+
+      if (!aadhaarNumber) {
+        console.log("No matching Aadhaar found between front and back");
+        console.log("Front numbers:", uniqueFrontNumbers);
+        console.log("Back numbers:", uniqueBackNumbers);
+        throw new CustomError(ERROR_MESSAGES.UPLOAD_SAME_AADAHR, StatusCodes.BAD_REQUEST);
+      }
+
+      console.log("Verified Aadhaar Number:", aadhaarNumber);
 
        const dobMatch = frontText.match(/(?:DOB|D0B|DoB|Date of Birth)[:\s]*?(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/i);
        const dateOfBirth = dobMatch ? dobMatch[1] : '';
